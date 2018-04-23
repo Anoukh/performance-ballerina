@@ -29,10 +29,16 @@ done
 export JMETER_HOME="${jmeter_dir}"
 export PATH=$JMETER_HOME/bin:$PATH
 
-concurrent_users=(50 100 150 500 1000)
-backend_sleep_time=(0 30 500 1000)
 message_size=(50 1024 10240 102400)
+concurrent_users=(1 50 100 500 1000)
+ballerina_files=("helloworld.bal" "process-intensive.bal")
+ballerina_flags=("" "--observe" "-e b7a.observability.tracing.enabled=true" "-e b7a.observability.metrics.enabled=true")
+
+ballerina_heap_size=1G
+
 ballerina_host=172.30.2.239
+ballerina_path=/HelloWorld/sayHello
+ballerina_ssh_host=ballerina
 
 # Test Duration in seconds
 test_duration=900
@@ -65,51 +71,44 @@ write_server_metrics() {
 
 for msize in ${message_size[@]}
 do
-    for sleep_time in ${backend_sleep_time[@]}
+    for u in ${concurrent_users[@]}
     do
-        for u in ${concurrent_users[@]}
+        for bal_file in ${ballerina_files[@]}
         do
-            # There are two JMeter Servers
-            total_users=$(($u * 2))
-            report_location=$PWD/results/${msize}B/${sleep_time}ms_sleep/${total_users}_users
-            echo "Report location is ${report_location}"
-            mkdir -p $report_location
+            for bal_flags in ${ballerina_flags[@]}
+            do
+                report_location=$PWD/results/${msize}B/$u_users
+                echo "Report location is ${report_location}"
+                mkdir -p $report_location
 
-            ssh $api_ssh_host "./apim/apim-start.sh $apim_heap_size"
-            ssh $backend_ssh_host "./netty-service/netty-start.sh $sleep_time"
+                echo "Starting ballerina Service"
+                ssh $ballerina_ssh_host "./ballerina/ballerina-start.sh $ballerina_heap_size $bal_file $bal_flags"
 
-            # Start remote JMeter servers
-            ssh $jmeter1_ssh_host "./jmeter/jmeter-server-start.sh $jmeter1_host"
-            ssh $jmeter2_ssh_host "./jmeter/jmeter-server-start.sh $jmeter2_host"
+                echo "Starting Jmeter server"
+                exec ./jmeter/jmeter-server-start.sh localhost &
 
-            export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
-            echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS"
-            jmeter -n -t apim-test.jmx -R $jmeter1_host,$jmeter2_host -X \
-                -Gusers=$u -Gduration=$test_duration -Ghost=$api_host -Gpath=$api_path \
-                -Gpayload=$HOME/${msize}B.json -Gresponse_size=${msize}B -Gtokens=$HOME/tokens.csv \
-                -Gprotocol=https -l ${report_location}/results.jtl
+                export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
+                echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS"
+                jmeter -n -t ballerina-test.jmx -X \
+                    -Gusers=$u -Gduration=$test_duration -Ghost=$ballerina_host -Gpath=$ballerina_path \
+                    -Gpayload=$HOME/${msize}B.json -Gresponse_size=${msize}B \
+                    -Gprotocol=http -l ${report_location}/results.jtl
 
-            write_server_metrics jmeter
-            write_server_metrics apim $api_ssh_host carbon
-            write_server_metrics netty $backend_ssh_host netty
-            write_server_metrics jmeter1 $jmeter1_ssh_host
-            write_server_metrics jmeter2 $jmeter2_ssh_host
+                echo "Writing Server Metrics"
+                write_server_metrics jmeter
+                write_server_metrics ballerina $ballerina_ssh_host ballerina/bre
 
-            $HOME/jtl-splitter/jtl-splitter.sh ${report_location}/results.jtl $warmup_time
-            echo "Generating Dashboard for Warmup Period"
-            jmeter -g ${report_location}/results-warmup.jtl -o $report_location/dashboard-warmup
-            echo "Generating Dashboard for Measurement Period"
-            jmeter -g ${report_location}/results-measurement.jtl -o $report_location/dashboard-measurement
+                $HOME/jtl-splitter/jtl-splitter.sh ${report_location}/results.jtl $warmup_time
+                echo "Generating Dashboard for Warmup Period"
+                jmeter -g ${report_location}/results-warmup.jtl -o $report_location/dashboard-warmup
+                echo "Generating Dashboard for Measurement Period"
+                jmeter -g ${report_location}/results-measurement.jtl -o $report_location/dashboard-measurement
 
-            echo "Zipping JTL files in ${report_location}"
-            zip -jm ${report_location}/jtls.zip ${report_location}/results*.jtl
+                echo "Zipping JTL files in ${report_location}"
+                zip -jm ${report_location}/jtls.zip ${report_location}/results*.jtl
 
-            scp $jmeter1_ssh_host:jmetergc.log ${report_location}/jmeter1_gc.log
-            scp $jmeter2_ssh_host:jmetergc.log ${report_location}/jmeter2_gc.log
-            scp $api_ssh_host:wso2am-*/repository/logs/wso2carbon.log ${report_location}/wso2carbon.log
-            scp $api_ssh_host:wso2am-*/repository/logs/gc.log ${report_location}/apim_gc.log
-            scp $backend_ssh_host:netty-service/logs/netty.log ${report_location}/netty.log
-            scp $backend_ssh_host:netty-service/logs/nettygc.log ${report_location}/netty_gc.log
+                scp $ballerina_ssh_host:ballerina/logs/ballerina.log ${report_location}/ballerina.log
+            done
         done
     done
 done

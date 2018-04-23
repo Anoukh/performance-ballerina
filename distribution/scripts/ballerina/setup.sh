@@ -21,12 +21,18 @@
 
 script_dir=$(dirname "$0")
 
-ballerina_version="ballerina-0.970.0-beta2-SNAPSHOT"
+if [[ -z  $1  ]]; then
+    echo "Please provide ballerina version. Example: $0 ballerina-0.970.0-beta12-SNAPSHOT"
+    exit 1
+fi
+
+ballerina_version=$1
+
 ballerina_path="$HOME/${ballerina_version}"
 
 # Extract Ballerina Distro
 if [[ ! -f $ballerina_path.zip ]]; then
-    echo "Please download Ballerina to $HOME"
+    echo "Please download ${ballerina_version} to $HOME"
     exit 1
 fi
 if [[ ! -d $ballerina_path ]]; then
@@ -37,6 +43,8 @@ else
     echo "Ballerina Distro is already extracted"
     exit 1
 fi
+mv $ballerina_path $HOME/ballerina
+cp $script_dir/bal/helloworld.bal $HOME/ballerina/bin
+cp $script_dir/bal/process-intensive.bal $HOME/ballerina/bin
 
-cp $script_dir/bal/helloworld.bal $ballerina_path/bin
-cp $script_dir/bal/process-intesive.bal $ballerina_path/bin
+echo "Completed"

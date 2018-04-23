@@ -19,44 +19,57 @@
 
 # Required parameters -> heap size, ballerina file
 
-
 heap_size=$1
 if [[ -z $heap_size ]]; then
+    echo "Running with default heap 1 GB."
     heap_size="1G"
 fi
 
 bal_file=$2
 if [[ -z $bal_file ]]; then
-    bal_file="helloworld.bal"
+    echo "No bal file specified."
+    exit 1
 fi
 
-jvm_dir=""
-for dir in /usr/lib/jvm/jdk1.8*; do
-    [ -d "${dir}" ] && jvm_dir="${dir}" && break
-done
-export JAVA_HOME="${jvm_dir}"
+flags=$3
+
+ballerina_path=$HOME/ballerina
+
+if pgrep -f ballerina/bre > /dev/null; then
+    echo "Shutting down Ballerina"
+    pkill -f ballerina/bre
+fi
+
+#jvm_dir=""
+#for dir in /usr/lib/jvm/jdk1.8*; do
+#    [ -d "${dir}" ] && jvm_dir="${dir}" && break
+#done
+#export JAVA_HOME="${jvm_dir}"
 
 log_files=(${ballerina_path}/logs/*)
 if [ ${#log_files[@]} -gt 1 ]; then
-    echo "Log files exists. Moving to /tmp/${bal_file}"
-    mv ${ballerina_path}/logs/* /tmp/${bal_file};
+    echo "Log files exists. Moving to /tmp/${bal_file}/"
+    mkdir /tmp/${bal_file}
+    mv ${ballerina_path}/logs/* /tmp/${bal_file}/;
 fi
 
 echo "Setting Heap to ${heap_size}"
 export JVM_MEM_OPTS="-Xms${heap_size} -Xmx${heap_size}"
 
 echo "Enabling GC Logs"
-export JAVA_OPTS="-XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:${ballerina_path}/logs/${bal_file}/gc.log"
+export JAVA_OPTS="-XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:${ballerina_path}/logs/gc.log"
 
-echo "Starting Ballerina Service"
-nohup ${ballerina_path}/bin/ballerina run ${bal_file} &>> ${ballerina_path}/logs/${bal_file}/ballerina.log&
+echo "Starting Ballerina with Flags: " $flags
+nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file} $flags &> ${ballerina_path}/logs/ballerina.log&
+
 
 echo "Waiting for Ballerina Service to start"
 
 while true
 do
     # Check Version service
-    response_code="$(curl -sk -w "%{http_code}" -o /dev/null https://localhost:9090/HelloWorld/sayHello)"
+
+    response_code="$(curl -s -o /dev/null -w '%{http_code}' --fail --connect-timeout 5 http://localhost:9090/HelloWorld/sayHello)"
     if [ $response_code -eq 200 ]; then
         echo "Ballerina Service started ${bal_file}"
         break
