@@ -40,11 +40,11 @@ if pgrep -f ballerina/bre > /dev/null; then
     pkill -f ballerina/bre
 fi
 
-#jvm_dir=""
-#for dir in /usr/lib/jvm/jdk1.8*; do
-#    [ -d "${dir}" ] && jvm_dir="${dir}" && break
-#done
-#export JAVA_HOME="${jvm_dir}"
+jvm_dir=""
+for dir in /usr/lib/jvm/jdk1.8*; do
+    [ -d "${dir}" ] && jvm_dir="${dir}" && break
+done
+export JAVA_HOME="${jvm_dir}"
 
 log_files=(${ballerina_path}/logs/*)
 if [ ${#log_files[@]} -gt 1 ]; then
