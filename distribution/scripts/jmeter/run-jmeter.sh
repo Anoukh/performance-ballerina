@@ -31,10 +31,9 @@ export PATH=$JMETER_HOME/bin:$PATH
 
 message_size=(50 1024 10240 102400)
 concurrent_users=(1 50 100 500 1000)
-ballerina_files=("helloworld.bal" "process-intensive.bal")
+ballerina_files=("helloworld.bal" "transformation.bal")
 ballerina_flags=("" "--observe" "-e b7a.observability.tracing.enabled=true" "-e b7a.observability.metrics.enabled=true")
-
-ballerina_heap_size=1G
+ballerina_heap_size=(1G, 25M)
 
 ballerina_host=172.30.2.239
 ballerina_path=/HelloWorld/sayHello
@@ -77,37 +76,40 @@ do
         do
             for bal_flags in ${ballerina_flags[@]}
             do
-                report_location=$PWD/results/${msize}B/$u_users
-                echo "Report location is ${report_location}"
-                mkdir -p $report_location
+                for heap in ${ballerina_heap_size[@]}
+                do
+                    report_location=$PWD/results/${msize}B/${u}_users/$bal_file/${bal_flags}_flags/$heap
+                    echo "Report location is ${report_location}"
+                    mkdir -p $report_location
 
-                echo "Starting ballerina Service"
-                ssh $ballerina_ssh_host "./ballerina/ballerina-start.sh $ballerina_heap_size $bal_file $bal_flags"
+                    echo "Starting ballerina Service"
+                    ssh $ballerina_ssh_host "./ballerina/ballerina-start.sh $heap $bal_file $bal_flags"
 
-                echo "Starting Jmeter server"
-                exec ./jmeter/jmeter-server-start.sh localhost &
+                    echo "Starting Jmeter server"
+                    exec ./jmeter/jmeter-server-start.sh localhost &
 
-                export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
-                echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS"
-                jmeter -n -t ballerina-test.jmx -X \
-                    -Gusers=$u -Gduration=$test_duration -Ghost=$ballerina_host -Gpath=$ballerina_path \
-                    -Gpayload=$HOME/${msize}B.json -Gresponse_size=${msize}B \
-                    -Gprotocol=http -l ${report_location}/results.jtl
+                    export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
+                    echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS"
+                    jmeter -n -t ballerina-test.jmx -X \
+                        -Gusers=$u -Gduration=$test_duration -Ghost=$ballerina_host -Gpath=$ballerina_path \
+                        -Gpayload=$HOME/${msize}B.json -Gresponse_size=${msize}B \
+                        -Gprotocol=http -l ${report_location}/results.jtl
 
-                echo "Writing Server Metrics"
-                write_server_metrics jmeter
-                write_server_metrics ballerina $ballerina_ssh_host ballerina/bre
+                    echo "Writing Server Metrics"
+                    write_server_metrics jmeter
+                    write_server_metrics ballerina $ballerina_ssh_host ballerina/bre
 
-                $HOME/jtl-splitter/jtl-splitter.sh ${report_location}/results.jtl $warmup_time
-                echo "Generating Dashboard for Warmup Period"
-                jmeter -g ${report_location}/results-warmup.jtl -o $report_location/dashboard-warmup
-                echo "Generating Dashboard for Measurement Period"
-                jmeter -g ${report_location}/results-measurement.jtl -o $report_location/dashboard-measurement
+                    $HOME/jtl-splitter/jtl-splitter.sh ${report_location}/results.jtl $warmup_time
+                    echo "Generating Dashboard for Warmup Period"
+                    jmeter -g ${report_location}/results-warmup.jtl -o $report_location/dashboard-warmup
+                    echo "Generating Dashboard for Measurement Period"
+                    jmeter -g ${report_location}/results-measurement.jtl -o $report_location/dashboard-measurement
 
-                echo "Zipping JTL files in ${report_location}"
-                zip -jm ${report_location}/jtls.zip ${report_location}/results*.jtl
+                    echo "Zipping JTL files in ${report_location}"
+                    zip -jm ${report_location}/jtls.zip ${report_location}/results*.jtl
 
-                scp $ballerina_ssh_host:ballerina/logs/ballerina.log ${report_location}/ballerina.log
+                    scp $ballerina_ssh_host:ballerina/logs/ballerina.log ${report_location}/ballerina.log
+                 done
             done
         done
     done

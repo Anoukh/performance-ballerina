@@ -40,12 +40,6 @@ if pgrep -f ballerina/bre > /dev/null; then
     pkill -f ballerina/bre
 fi
 
-jvm_dir=""
-for dir in /usr/lib/jvm/jdk1.8*; do
-    [ -d "${dir}" ] && jvm_dir="${dir}" && break
-done
-export JAVA_HOME="${jvm_dir}"
-
 log_files=(${ballerina_path}/logs/*)
 if [ ${#log_files[@]} -gt 1 ]; then
     echo "Log files exists. Moving to /tmp/${bal_file}/"
@@ -54,10 +48,9 @@ if [ ${#log_files[@]} -gt 1 ]; then
 fi
 
 echo "Setting Heap to ${heap_size}"
-export JVM_MEM_OPTS="-Xms${heap_size} -Xmx${heap_size}"
 
 echo "Enabling GC Logs"
-export JAVA_OPTS="-XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:${ballerina_path}/logs/gc.log"
+export JAVA_OPTS="-XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:${ballerina_path}/logs/gc.log -Xms${heap_size} -Xmx${heap_size}"
 
 echo "Starting Ballerina with Flags: " $flags
 nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file} $flags &> ${ballerina_path}/logs/ballerina.log&
