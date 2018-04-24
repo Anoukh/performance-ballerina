@@ -46,5 +46,7 @@ fi
 mv $ballerina_path $HOME/ballerina
 cp $script_dir/bal/helloworld.bal $HOME/ballerina/bin
 cp $script_dir/bal/process-intensive.bal $HOME/ballerina/bin
+cp $script_dir/bal/transformation.bal $HOME/ballerina/bin
+cp $script_dir/bal/passthrough.bal $HOME/ballerina/bin
 
 echo "Completed"

@@ -31,9 +31,15 @@ if [[ -z $bal_file ]]; then
     exit 1
 fi
 
-flags=$3
+flags="${@:3:99}"
 
 ballerina_path=$HOME/ballerina
+
+jvm_dir=""
+for dir in /usr/lib/jvm/jdk1.8*; do
+    [ -d "${dir}" ] && jvm_dir="${dir}" && break
+done
+export JAVA_HOME="${jvm_dir}"
 
 if pgrep -f ballerina/bre > /dev/null; then
     echo "Shutting down Ballerina"
@@ -52,24 +58,13 @@ echo "Setting Heap to ${heap_size}"
 echo "Enabling GC Logs"
 export JAVA_OPTS="-XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:${ballerina_path}/logs/gc.log -Xms${heap_size} -Xmx${heap_size}"
 
+echo "Building bal file"
+cd ${ballerina_path}/bin
+./ballerina build ${bal_file}
+cd $HOME
+
 echo "Starting Ballerina with Flags: " $flags
-nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file} $flags &> ${ballerina_path}/logs/ballerina.log&
+nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file}x $flags -e b7a.observability.tracing.jaeger.reporter.hostname=10.42.0.2 &> ${ballerina_path}/logs/ballerina.log&
 
-
-echo "Waiting for Ballerina Service to start"
-
-while true
-do
-    # Check Version service
-
-    response_code="$(curl -s -o /dev/null -w '%{http_code}' --fail --connect-timeout 5 http://localhost:9090/HelloWorld/sayHello)"
-    if [ $response_code -eq 200 ]; then
-        echo "Ballerina Service started ${bal_file}"
-        break
-    else
-        sleep 10
-    fi
-done
-
-# Wait for another 10 seconds to make sure that the server is ready to accept API requests.
-sleep 10
+echo "Wait for 20 seconds to make sure that the server is ready to accept API requests."
+sleep 20

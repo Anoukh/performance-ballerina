@@ -1,11 +1,4 @@
 import ballerina/http;
-import ballerina/math;
-
-type Product {
-    int id;
-    string name;
-    float price;
-};
 
 endpoint http:Listener storeServiceEndpoint {
     port:9090
@@ -16,14 +9,13 @@ endpoint http:Listener storeServiceEndpoint {
 }
 service HelloWorld bind storeServiceEndpoint {
     @http:ResourceConfig {
-        methods:["GET"],
+        methods:["POST"],
         path:"/sayHello"
     }
     sayHello(endpoint outboundEP, http:Request req) {
 
-        json payload = check req.getJsonPayload();
+        json payload = req.getJsonPayload() but {error => {}};
         xml xmlPayload = check payload.toXML({});
-
         http:Response res = new;
         res.setXmlPayload(xmlPayload);
         _ = outboundEP -> respond(res);

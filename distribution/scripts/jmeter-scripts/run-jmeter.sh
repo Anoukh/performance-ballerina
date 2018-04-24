@@ -31,12 +31,12 @@ export PATH=$JMETER_HOME/bin:$PATH
 
 message_size=(50 1024 10240 102400)
 concurrent_users=(1 50 100 500 1000)
-ballerina_files=("helloworld.bal" "transformation.bal")
-ballerina_flags=("" "--observe" "-e b7a.observability.tracing.enabled=true" "-e b7a.observability.metrics.enabled=true")
-ballerina_heap_size=(1G, 25M)
+ballerina_files=("helloworld.bal" "transformation.bal" "passthrough.bal")
+ballerina_flags=("\ " "--observe" "-e\ b7a.observability.tracing.enabled=true" "-e\ b7a.observability.metrics.enabled=true")
+ballerina_heap_size=(1G 25M)
 
-ballerina_host=172.30.2.239
-ballerina_path=/HelloWorld/sayHello
+ballerina_host=10.42.0.6
+api_path=/HelloWorld/sayHello
 ballerina_ssh_host=ballerina
 
 # Test Duration in seconds
@@ -48,7 +48,7 @@ warmup_time=5
 mkdir results
 cp $0 results
 
-./payloads/generate-payloads.sh
+$HOME/payloads/generate-payloads.sh
 
 write_server_metrics() {
     server=$1
@@ -68,32 +68,46 @@ write_server_metrics() {
     fi
 }
 
-for msize in ${message_size[@]}
+for heap in ${ballerina_heap_size[@]}
 do
-    for u in ${concurrent_users[@]}
+    for bal_file in ${ballerina_files[@]}
     do
-        for bal_file in ${ballerina_files[@]}
+        if [[ ${bal_file} == "helloworld.bal" ]]; then
+            echo "Hello World file executing hence only one message size"
+            message_size=(50)
+        fi
+        for bal_flags in "${ballerina_flags[@]}"
         do
-            for bal_flags in ${ballerina_flags[@]}
+            for u in ${concurrent_users[@]}
             do
-                for heap in ${ballerina_heap_size[@]}
+                for msize in ${message_size[@]}
                 do
-                    report_location=$PWD/results/${msize}B/${u}_users/$bal_file/${bal_flags}_flags/$heap
+                    report_location=$PWD/results/${msize}B/${u}_users/$bal_file/"${bal_flags//[[:space:]]/}"_flags/$heap_heap
                     echo "Report location is ${report_location}"
                     mkdir -p $report_location
 
                     echo "Starting ballerina Service"
-                    ssh $ballerina_ssh_host "./ballerina/ballerina-start.sh $heap $bal_file $bal_flags"
+                    ssh $ballerina_ssh_host "./ballerina-scripts/ballerina-start.sh $heap $bal_file $bal_flags"
 
                     echo "Starting Jmeter server"
-                    exec ./jmeter/jmeter-server-start.sh localhost &
 
                     export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
-                    echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS"
-                    jmeter -n -t ballerina-test.jmx -X \
-                        -Gusers=$u -Gduration=$test_duration -Ghost=$ballerina_host -Gpath=$ballerina_path \
-                        -Gpayload=$HOME/${msize}B.json -Gresponse_size=${msize}B \
-                        -Gprotocol=http -l ${report_location}/results.jtl
+                    echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS" Ballerina host: $ballerina_host Path: $api_path Flags: $bal_flags
+
+                    if [[ ${bal_file} == "helloworld.bal" ]]; then
+                        echo "Using get request jmx"
+                        jmeter -n -t $HOME/jmeter-scripts/get-request-test.jmx \
+                            -Jusers=$u -Jduration=$test_duration -Jhost=$ballerina_host -Jport=9090 -Jpath=$api_path \
+                            -Jprotocol=http -l ${report_location}/results.jtl
+                    else
+                        echo "Using post request jmx"
+                        jmeter -n -t $HOME/jmeter-scripts/post-request-test.jmx \
+                            -Jusers=$u -Jduration=$test_duration -Jhost=$ballerina_host -Jport=9090 -Jpath=$api_path \
+                            -Jpayload=$HOME/${msize}B.json -Jresponse_size=${msize}B \
+                            -Jprotocol=http -l ${report_location}/results.jtl
+                    fi
+
+
 
                     echo "Writing Server Metrics"
                     write_server_metrics jmeter
