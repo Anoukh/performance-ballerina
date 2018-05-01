@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2018 WSO2 Inc. (http://wso2.org)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +48,7 @@ fi
 log_files=(${ballerina_path}/logs/*)
 if [ ${#log_files[@]} -gt 1 ]; then
     echo "Log files exists. Moving to /tmp/${bal_file}/"
-    mkdir /tmp/${bal_file}
+    mkdir -p /tmp/${bal_file}
     mv ${ballerina_path}/logs/* /tmp/${bal_file}/;
 fi
 
@@ -66,5 +65,5 @@ cd $HOME
 echo "Starting Ballerina with Flags: " $flags
 nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file}x $flags -e b7a.observability.tracing.jaeger.reporter.hostname=10.42.0.2 &> ${ballerina_path}/logs/ballerina.log&
 
-echo "Wait for 20 seconds to make sure that the server is ready to accept API requests."
-sleep 20
+echo "Wait for 10 seconds to make sure that the server is ready to accept API requests."
+sleep 10

@@ -29,10 +29,11 @@ done
 export JMETER_HOME="${jmeter_dir}"
 export PATH=$JMETER_HOME/bin:$PATH
 
-message_size=(50 1024 10240 102400)
-concurrent_users=(1 50 100 500 1000)
-ballerina_files=("helloworld.bal" "transformation.bal" "passthrough.bal")
-ballerina_flags=("\ " "--observe" "-e\ b7a.observability.tracing.enabled=true" "-e\ b7a.observability.metrics.enabled=true")
+message_size=(50 1024 10240)
+concurrent_users=(50 100 500)
+ballerina_files=("transformation.bal" "passthrough.bal")
+ballerina_flags=("\ " "--observe" "-e\ b7a.observability.tracing.enabled=true" "-e\ b7a.observability.metrics.enabled=true" "-e\ b7a.observability.metrics.enabled=true\ -e\ b7a.observability.metrics.provider=noop" "-e\ b7a.observability.tracing.enabled=true\ -e\ b7a.observability.tracing.name=noop")
+ballerina_flags_name=("default" "observe" "tracing" "metrics" "metricsnoop" "tracingnoop")
 ballerina_heap_size=(1G 25M)
 
 ballerina_host=10.42.0.6
@@ -40,10 +41,10 @@ api_path=/HelloWorld/sayHello
 ballerina_ssh_host=ballerina
 
 # Test Duration in seconds
-test_duration=900
+test_duration=360
 
 # Warm-up time in minutes
-warmup_time=5
+warmup_time=2
 
 mkdir results
 cp $0 results
@@ -76,13 +77,16 @@ do
             echo "Hello World file executing hence only one message size"
             message_size=(50)
         fi
+        COUNTER=-1
         for bal_flags in "${ballerina_flags[@]}"
         do
+            COUNTER=$[$COUNTER +1]
             for u in ${concurrent_users[@]}
             do
                 for msize in ${message_size[@]}
                 do
-                    report_location=$PWD/results/${msize}B/${u}_users/$bal_file/"${bal_flags//[[:space:]]/}"_flags/$heap_heap
+                    report_location=$PWD/results/${heap}_heap/${bal_file}_bal/${ballerina_flags_name[$COUNTER]}_flags/${u}_users/${msize}B
+
                     echo "Report location is ${report_location}"
                     mkdir -p $report_location
 
@@ -107,8 +111,6 @@ do
                             -Jprotocol=http -l ${report_location}/results.jtl
                     fi
 
-
-
                     echo "Writing Server Metrics"
                     write_server_metrics jmeter
                     write_server_metrics ballerina $ballerina_ssh_host ballerina/bre
@@ -123,6 +125,7 @@ do
                     zip -jm ${report_location}/jtls.zip ${report_location}/results*.jtl
 
                     scp $ballerina_ssh_host:ballerina/logs/ballerina.log ${report_location}/ballerina.log
+                    scp $ballerina_ssh_host:ballerina/logs/gc.log ${report_location}/ballerina_gc.log
                  done
             done
         done

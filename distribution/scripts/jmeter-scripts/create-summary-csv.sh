@@ -98,27 +98,36 @@ write_loadavg_details() {
     fi
 }
 
-for heap_size_dir in $(find . -maxdepth 1 -name '*B' | sort -V)
+for heap_size_dir in $(find . -maxdepth 1 -name '*_heap' | sort -V)
 do
-    for message_size_dir in $(find . -maxdepth 1 -name '*B' | sort -V)
+    echo "Heap Size Dir " + $heap_size_dir
+    for bal_file_dir in $(find $heap_size_dir -maxdepth 1 -name '*_bal' | sort -V)
     do
-        for user_dir in $(find $message_size_dir -maxdepth 1 -name '*_users' | sort -V)
+        echo "bal_file_dir" + $bal_file_dir
+        for flags_dir in $(find $bal_file_dir -maxdepth 1 -name '*_flags' | sort -V)
         do
-            for bal_file in $(find $sleep_time_dir -maxdepth 1 -name '*.bal' | sort -V)
+            echo "flags_dir" + $flags_dir
+            for user_dir in $(find $flags_dir -maxdepth 1 -name '*_users' | sort -V)
             do
-                for flags in $(find $sleep_time_dir -maxdepth 1 -name '*_flags' | sort -V)
+                echo "user_dir" + $user_dir
+                for message_size_dir in $(find $user_dir -maxdepth 1 -name '*B' | sort -V)
                 do
-                    dashboard_data_file=$flags/dashboard-measurement/content/js/dashboard.js
+                    echo "message_size_dir" + $message_size_dir
+                    dashboard_data_file=$message_size_dir/dashboard-measurement/content/js/dashboard.js
                     if [[ ! -f $dashboard_data_file ]]; then
                         echo "WARN: Dashboard data file not found: $dashboard_data_file"
                         continue
                     fi
                     statisticsTableData=$(grep '#statisticsTable' $dashboard_data_file | sed  's/^.*"#statisticsTable"), \({.*}\).*$/\1/')
+
                     echo "Getting data from $dashboard_data_file"
-                    message_size=$(echo $message_size_dir | sed -r 's/.\/([0-9]+)B.*/\1/')
-                    sleep_time=$(echo $sleep_time_dir | sed -r 's/.*\/([0-9]+)ms_sleep.*/\1/')
+                    heap_size=$(echo $heap_size_dir | sed -r 's/.\/([0-9]+[a-zA-Z])_heap.*/\1/')
+                    bal_file=$(echo $bal_file_dir | sed -nE 's/.*\/([[:alnum:]]+.bal)_bal.*/\1/p')
+                    flags=$(echo $flags_dir | sed -nE 's/.*\/([[:alnum:]]+)_flags.*/\1/p')
                     concurrent_users=$(echo $user_dir | sed -r 's/.*\/([0-9]+)_users.*/\1/')
-                    echo -n "$message_size,$sleep_time,$concurrent_users" >> $filename
+                    message_size=$(echo $message_size_dir | sed -r 's/.*\/([0-9]+)B.*/\1/')
+
+                    echo -n "$heap_size,$bal_file,$flags,$concurrent_users,$message_size" >> $filename
                     write_column "$statisticsTableData" 1
                     write_column "$statisticsTableData" 2
                     write_column "$statisticsTableData" 3
@@ -132,7 +141,7 @@ do
                     write_column "$statisticsTableData" 11
                     write_column "$statisticsTableData" 12
 
-                    write_gc_summary_details apim
+                    write_gc_summary_details ballerina
                     if [ "$include_all" = true ] ; then
                         write_gc_summary_details netty
                         write_gc_summary_details jmeter
@@ -140,7 +149,7 @@ do
                         write_gc_summary_details jmeter2
                     fi
 
-                    write_loadavg_details apim
+                    write_loadavg_details ballerina
                     if [ "$include_all" = true ] ; then
                         write_loadavg_details netty
                         write_loadavg_details jmeter
