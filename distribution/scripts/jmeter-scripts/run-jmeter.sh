@@ -73,6 +73,7 @@ for heap in ${ballerina_heap_size[@]}
 do
     for bal_file in ${ballerina_files[@]}
     do
+        # TODO Hard coded helloworld.bal to use only message size 50
         if [[ ${bal_file} == "helloworld.bal" ]]; then
             echo "Hello World file executing hence only one message size"
             message_size=(50)
@@ -98,13 +99,14 @@ do
                     export JVM_ARGS="-Xms2g -Xmx2g -XX:+PrintGC -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:$report_location/jmeter_gc.log"
                     echo "# Running JMeter. Concurrent Users: $u Duration: $test_duration JVM Args: $JVM_ARGS" Ballerina host: $ballerina_host Path: $api_path Flags: $bal_flags
 
+                    # TODO Hard coded to use GET requests for helloworld.bal and POST requests for others
                     if [[ ${bal_file} == "helloworld.bal" ]]; then
-                        echo "Using get request jmx"
+                        echo "Using GET request jmx"
                         jmeter -n -t $HOME/jmeter-scripts/get-request-test.jmx \
                             -Jusers=$u -Jduration=$test_duration -Jhost=$ballerina_host -Jport=9090 -Jpath=$api_path \
                             -Jprotocol=http -l ${report_location}/results.jtl
                     else
-                        echo "Using post request jmx"
+                        echo "Using POST request jmx"
                         jmeter -n -t $HOME/jmeter-scripts/post-request-test.jmx \
                             -Jusers=$u -Jduration=$test_duration -Jhost=$ballerina_host -Jport=9090 -Jpath=$api_path \
                             -Jpayload=$HOME/${msize}B.json -Jresponse_size=${msize}B \

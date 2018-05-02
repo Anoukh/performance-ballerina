@@ -20,7 +20,7 @@
 script_dir=$(dirname "$0")
 
 if [[ -z  $1  ]]; then
-    echo "Please provide ballerina version. Example: $0 ballerina-0.970.0"
+    echo "Please provide ballerina version. Example: $0 ballerina-runtime-0.970.0"
     exit 1
 fi
 
