@@ -20,7 +20,7 @@
 script_dir=$(dirname "$0")
 
 if [[ -z  $1  ]]; then
-    echo "Please provide ballerina version. Example: $0 ballerina-runtime-0.970.0"
+    echo "Please provide ballerina version. Example: $0 ballerina-platform-0.970.0"
     exit 1
 fi
 
@@ -41,6 +41,8 @@ else
     echo "Ballerina Distro is already extracted"
     exit 1
 fi
+
+mkdir -p ballerina_path/logs/
 
 # TODO: Parameterize the ballerina files being copied
 mv $ballerina_path $HOME/ballerina
