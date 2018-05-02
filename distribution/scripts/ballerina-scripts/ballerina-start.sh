@@ -17,7 +17,7 @@
 # Start Ballerina Service
 # ----------------------------------------------------------------------------
 
-# Required parameters -> heap size, ballerina file
+# Required parameters -> heap size, ballerina file, flags
 
 heap_size=$1
 if [[ -z $heap_size ]]; then
@@ -64,7 +64,8 @@ cd ${ballerina_path}/bin
 cd $HOME
 
 echo "Starting Ballerina with Flags: " $flags
-nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file}x $flags -e b7a.observability.tracing.jaeger.reporter.hostname=10.42.0.2 &> ${ballerina_path}/logs/ballerina.log&
+nohup ${ballerina_path}/bin/ballerina run ${ballerina_path}/bin/${bal_file}x $flags &> ${ballerina_path}/logs/ballerina.log&
 
+# TODO Do a curl and check if service is started
 echo "Wait for 10 seconds to make sure that the server is ready to accept API requests."
 sleep 10

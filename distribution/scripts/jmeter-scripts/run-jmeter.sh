@@ -34,17 +34,17 @@ concurrent_users=(50 100 500)
 ballerina_files=("transformation.bal" "passthrough.bal")
 ballerina_flags=("\ " "--observe" "-e\ b7a.observability.tracing.enabled=true" "-e\ b7a.observability.metrics.enabled=true" "-e\ b7a.observability.metrics.enabled=true\ -e\ b7a.observability.metrics.provider=noop" "-e\ b7a.observability.tracing.enabled=true\ -e\ b7a.observability.tracing.name=noop")
 ballerina_flags_name=("default" "observe" "tracing" "metrics" "metricsnoop" "tracingnoop")
-ballerina_heap_size=(1G 25M)
+ballerina_heap_size=(1G 250M)
 
 ballerina_host=10.42.0.6
 api_path=/HelloWorld/sayHello
 ballerina_ssh_host=ballerina
 
 # Test Duration in seconds
-test_duration=360
+test_duration=600
 
 # Warm-up time in minutes
-warmup_time=2
+warmup_time=5
 
 mkdir results
 cp $0 results

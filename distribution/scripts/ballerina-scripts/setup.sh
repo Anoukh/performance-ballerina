@@ -41,6 +41,8 @@ else
     echo "Ballerina Distro is already extracted"
     exit 1
 fi
+
+# TODO: Parameterize the ballerina files being copied
 mv $ballerina_path $HOME/ballerina
 cp $script_dir/bal/helloworld.bal $HOME/ballerina/bin
 cp $script_dir/bal/transformation.bal $HOME/ballerina/bin
