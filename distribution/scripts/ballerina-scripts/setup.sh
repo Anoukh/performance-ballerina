@@ -17,12 +17,10 @@
 # Setup Ballerina Distro
 # ----------------------------------------------------------------------------
 
-# This script will run all other scripts to configure and setup Ballerina Distro
-
 script_dir=$(dirname "$0")
 
 if [[ -z  $1  ]]; then
-    echo "Please provide ballerina version. Example: $0 ballerina-0.970.0-beta12-SNAPSHOT"
+    echo "Please provide ballerina version. Example: $0 ballerina-0.970.0"
     exit 1
 fi
 
@@ -45,7 +43,6 @@ else
 fi
 mv $ballerina_path $HOME/ballerina
 cp $script_dir/bal/helloworld.bal $HOME/ballerina/bin
-cp $script_dir/bal/process-intensive.bal $HOME/ballerina/bin
 cp $script_dir/bal/transformation.bal $HOME/ballerina/bin
 cp $script_dir/bal/passthrough.bal $HOME/ballerina/bin
 
