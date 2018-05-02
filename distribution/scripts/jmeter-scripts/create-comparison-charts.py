@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.6
-# Copyright 2017 WSO2 Inc. (http://wso2.org)
+# Copyright 2018 WSO2 Inc. (http://wso2.org)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ def read_summary_csv_files():
     df_all.to_csv('all_results.csv')
 
     # Format message size values
-    df_merge['Message Size (Bytes)'] = df_merge['Message Size (Bytes)'].map(apimchart.format_bytes)
+    df_merge['Message Size (Bytes)'] = df_merge['Message Size (Bytes)'].map(ballerinachart.format_bytes)
     return df_merge, df_all
 
 
